@@ -12,6 +12,7 @@ goroutine buildup, and latency issues in production systems.
 ## Maintainers / Speakers
 
 **Aryan Mehrotra**
+
 LinkedIn: [https://www.linkedin.com/in/aryanmehrotra](https://www.linkedin.com/in/aryanmehrotra)
 
 X: [https://x.com/_aryanmehrotra](https://x.com/_aryanmehrotra)
@@ -20,6 +21,7 @@ GitHub: [https://github.com/aryanmehrotra](https://github.com/aryanmehrotra)
 
 
 **Umang Mundhra**
+
 LinkedIn: [https://www.linkedin.com/in/umang01-hash](https://www.linkedin.com/in/umang01-hash)
 
 X: [https://x.com/umang01hash](https://x.com/umang01hash)
@@ -57,13 +59,20 @@ Interactive pprof guide:
 
 ## Talks
 
+Using GoFr for building Microservices - Aryan Mehrotra & Umang Mundhra (GopherCon)
+
+[https://youtu.be/EAMwtmaZoPY?si=OXX0y5c7_Ygg1Wor](https://youtu.be/EAMwtmaZoPY?si=OXX0y5c7_Ygg1Wor)
+
 Two Go Programs, Three Profiling Techniques — Dave Cheney (GopherCon)
+
 [https://www.youtube.com/watch?v=nok0aYiGiYA](https://www.youtube.com/watch?v=nok0aYiGiYA)
 
 Profiling Request Latency with Critical Path Analysis (GopherCon)
+
 [https://www.youtube.com/watch?v=BayZ3k-QkFw](https://www.youtube.com/watch?v=BayZ3k-QkFw)
 
 Building a Go Profiler with eBPF (GopherCon Europe)
+
 [https://www.youtube.com/watch?v=OlHQ6gkwqyA](https://www.youtube.com/watch?v=OlHQ6gkwqyA)
 
 ---
