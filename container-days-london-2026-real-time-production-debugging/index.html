@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mechanical Sympathy: Profiling Go in Production</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --gofr-bg: #0E172A;
+        --gofr-cyan: #7dd3fc;
+        --gofr-white: #ffffff;
+        --gofr-slate: #94a3b8;
+        --gofr-accent: #00ADD8;
+
+        /* Standardized Font Sizes adjusted for comfortable viewing */
+        --font-size-h1: 6rem;   
+        --font-size-h2: 3.5rem;   
+        --font-size-body: 1.8rem; 
+        --font-size-detail: 1.2rem;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        overflow: hidden;
+        background-color: var(--gofr-bg);
+        color: var(--gofr-white);
+        -webkit-font-smoothing: antialiased;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .font-lexend {
+        font-family: 'Lexend', sans-serif;
+      }
+      
+      .h1-text { font-size: var(--font-size-h1); font-weight: 900; line-height: 1; letter-spacing: -0.05em; }
+      .h2-text { font-size: var(--font-size-h2); font-weight: 900; line-height: 1; letter-spacing: -0.04em; }
+      .body-text { font-size: var(--font-size-body); font-weight: 500; line-height: 1.2; letter-spacing: -0.02em; }
+      .detail-text { font-size: var(--font-size-detail); font-weight: 400; line-height: 1.5; }
+
+      .bg-app-container {
+        position: fixed;
+        inset: 0;
+        background-color: var(--gofr-bg);
+        z-index: -1;
+      }
+      
+      .bg-circuitry {
+        position: absolute;
+        inset: 0;
+        background-image: url('https://gofr.dev/_next/static/media/hero-bg.4b4249a5.svg');
+        background-size: cover;
+        background-position: center;
+        opacity: 0.12;
+        pointer-events: none;
+      }
+
+      .bg-glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 40%, rgba(0, 173, 216, 0.1) 0%, transparent 65%);
+        pointer-events: none;
+      }
+
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.3",
+    "vite": "https://esm.sh/vite@^7.3.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div class="bg-app-container">
+      <div class="bg-circuitry"></div>
+      <div class="bg-glow"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

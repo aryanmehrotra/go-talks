@@ -1,0 +1,5 @@
+{
+  "name": "Mechanical Sympathy: Profiling Go in Production",
+  "description": "A deep-dive session into Go performance tuning and production debugging using GoFr and pprof, inspired by industry-leading engineering talks.",
+  "requestFramePermissions": []
+}
