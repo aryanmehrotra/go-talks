@@ -77,6 +77,103 @@
     color: var(--gofr-fg-strong);
 }
 
+/* ---------- sponsor / event wordmark (fixed bottom-left on every slide) --- */
+.sponsor-watermark {
+    position: fixed;
+    bottom: 22px;
+    left: 32px;
+    width: 110px;
+    height: auto;
+    z-index: 1000;
+    opacity: 0.55;
+    pointer-events: none;
+    /* SVG ships with a dark navy fill (#173361) — invert to white on dark bg */
+    filter: brightness(0) invert(1);
+}
+
+/* ---------- deck controls (theme + fullscreen, bottom-right) -------------- */
+.deck-controls {
+    position: fixed;
+    bottom: 22px;
+    right: 32px;
+    display: inline-flex;
+    gap: 6px;
+    z-index: 1001;
+}
+
+.deck-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: var(--gofr-fg-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.deck-btn:hover {
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--gofr-fg-strong);
+    border-color: rgba(255, 255, 255, 0.24);
+}
+
+.deck-btn:focus-visible {
+    outline: 2px solid var(--gofr-cyan);
+    outline-offset: 2px;
+}
+
+/* show the icon that reflects the state you'd switch INTO */
+.deck-btn .icon-light { display: none; }
+.deck-btn .icon-dark  { display: inline-block; }
+[data-theme="light"] .deck-btn .icon-light { display: inline-block; }
+[data-theme="light"] .deck-btn .icon-dark  { display: none; }
+
+.deck-btn .icon-exit  { display: none; }
+.deck-btn .icon-enter { display: inline-block; }
+body.is-fullscreen .deck-btn .icon-exit  { display: inline-block; }
+body.is-fullscreen .deck-btn .icon-enter { display: none; }
+
+/* ---------- light theme overrides ---------------------------------------- */
+[data-theme="light"] {
+    --gofr-bg:        #f8fafc;
+    --gofr-bg-soft:   #ffffff;
+    --gofr-panel:     rgba(15, 23, 42, 0.04);
+    --gofr-border:    rgba(15, 23, 42, 0.12);
+    --gofr-fg:        #1e293b;
+    --gofr-fg-strong: #0f172a;
+    --gofr-fg-muted:  #64748b;
+    --gofr-cyan:      #0284c7;
+    --gofr-cyan-soft: rgba(2, 132, 199, 0.14);
+    --gofr-indigo:    #4f46e5;
+    --gofr-indigo-soft: rgba(79, 70, 229, 0.14);
+    --gofr-amber:     #b45309;
+    --gofr-red:       #dc2626;
+    --gofr-green:     #059669;
+}
+
+/* invert watermarks for light mode so they remain legible */
+[data-theme="light"] .zopdev-watermark { filter: brightness(0) invert(0.15); }
+[data-theme="light"] .sponsor-watermark { filter: none; opacity: 0.7; }
+
+[data-theme="light"] .deck-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.14);
+    color: var(--gofr-fg-muted);
+}
+[data-theme="light"] .deck-btn:hover {
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--gofr-fg-strong);
+    border-color: rgba(15, 23, 42, 0.24);
+}
+
+/* dim the background circuitry in light mode — the SVG is dark on dark */
+[data-theme="light"] .reveal-viewport::before { opacity: 0.05; filter: invert(1); }
+
 /* circuitry SVG + radial glow backdrop — matches ppt-3 */
 .reveal-viewport::before {
     content: "";

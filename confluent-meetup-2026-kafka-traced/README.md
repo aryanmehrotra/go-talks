@@ -19,8 +19,8 @@ following every message from HTTP entry → publish → broker → subscribe →
 ```
 
 All three services emit OTel spans; GoFr injects/extracts the W3C `traceparent`
-through Kafka headers automatically. Jaeger (or the hosted tracer at
-[tracer.gofr.dev](https://tracer.gofr.dev)) renders one connected trace.
+through Kafka headers automatically. The hosted tracer at
+[tracer.gofr.dev](https://tracer.gofr.dev) renders one connected trace.
 
 ---
 
@@ -30,24 +30,25 @@ through Kafka headers automatically. Jaeger (or the hosted tracer at
 git clone https://github.com/aryanmehrotra/go-talks.git
 cd go-talks/confluent-meetup-2026-kafka-traced
 
-docker-compose up -d        # 6 containers: zk, kafka, prom, grafana, 3 services
+docker-compose up -d        # 7 containers: zk, kafka, prom, grafana, 3 services
 
 # Trigger the flow
-curl -X POST http://localhost:8000/order \
+curl -X POST http://localhost:11000/order \
   -H "Content-Type: application/json" \
   -d '{"orderId":"ORD-42","item":"GoFr T-shirt","qty":1}'
 
 # Inspect
 open https://tracer.gofr.dev           # GoFr hosted tracer — paste the trace ID from response headers
-open http://localhost:3000             # Grafana — "GoFr Pub/Sub" dashboard (anonymous Viewer)
-open http://localhost:9090             # Prometheus
-curl http://localhost:2121/metrics     # raw counters from api-gateway
+open http://localhost:11030            # Grafana — "GoFr Pub/Sub" dashboard (anonymous Viewer)
+open http://localhost:11090            # Prometheus
+curl http://localhost:11121/metrics    # raw counters from api-gateway
 ```
 
-> **Tracer backends.** Default is `TRACE_EXPORTER=gofr` (hosted, needs internet).
-> For a fully offline demo, uncomment the `jaeger` service in `docker-compose.yaml`
-> and change `TRACE_EXPORTER=otlp` + `TRACER_URL=jaeger:4317` in each
-> `configs/.env`.
+> **Tracer.** The demo ships with `TRACE_EXPORTER=gofr` so traces land in
+> GoFr's hosted tracer at https://tracer.gofr.dev — no local tracing backend
+> needed, just internet. For an offline demo, add a `jaeger` service to the
+> compose file and set `TRACE_EXPORTER=otlp` / `TRACER_URL=jaeger:4317` in
+> each `configs/.env`.
 
 You should see one trace with **5 spans** connected across all 3 services:
 
@@ -66,7 +67,7 @@ HTTP POST /order      (api-gateway,           kind=server)
 ```bash
 docker-compose stop notification-service
 # Hit /order a few times — alerts pile up on the broker
-curl -X POST http://localhost:8000/order -H "Content-Type: application/json" \
+curl -X POST http://localhost:11000/order -H "Content-Type: application/json" \
   -d '{"orderId":"X","item":"y","qty":1}'
 # Grafana: subscribe rate for notification-service is 0; publish keeps climbing.
 docker-compose start notification-service

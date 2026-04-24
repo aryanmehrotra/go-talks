@@ -21,20 +21,11 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks: [demo]
 
-  # Default: traces go to GoFr's hosted tracer at https://tracer.gofr.dev
-  # (TRACE_EXPORTER=gofr in each service's configs/.env — needs internet).
-  #
-  # Offline fallback: uncomment this jaeger service and switch the .env files
-  # to TRACE_EXPORTER=otlp / TRACER_URL=jaeger:4317.
-  #
-  jaeger:
-    image: jaegertracing/all-in-one:1.55
-    ports:
-      - "11686:16686"
-      - "11317:4317"
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-    networks: [demo]
+  # Traces are shipped to GoFr's hosted tracer at https://tracer.gofr.dev
+  # (TRACE_EXPORTER=gofr in each service's configs/.env).
+  # No local tracing backend is needed — just internet access.
+  # To run fully offline, swap to OTLP by adding a `jaeger` service and setting
+  # TRACE_EXPORTER=otlp / TRACER_URL=jaeger:4317 in each configs/.env.
 
   prometheus:
     image: prom/prometheus:latest

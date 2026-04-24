@@ -22,7 +22,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -37,9 +39,16 @@ func initTracer(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+	res, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceName("raw-kafka-producer")),
+	)
+	if err != nil {
+		return nil, err
+	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.TraceContext{})

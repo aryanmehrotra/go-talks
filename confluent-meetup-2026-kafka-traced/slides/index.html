@@ -28,6 +28,21 @@
 <!-- zop.dev watermark on every slide (top-right) -->
 <img class="zopdev-watermark" src="zopdev-logo.svg" alt="zop.dev" />
 
+<!-- Sponsor / event-host wordmark (bottom-left on every slide) -->
+<img class="sponsor-watermark" src="sponsor-logo.svg" alt="sponsor" />
+
+<!-- Deck controls: light/dark + fullscreen -->
+<div class="deck-controls" role="toolbar" aria-label="deck controls">
+  <button id="themeToggle" class="deck-btn" type="button" aria-label="Toggle light/dark" title="Toggle light/dark (T)">
+    <svg class="icon-dark"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  </button>
+  <button id="fullscreenToggle" class="deck-btn" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen (F)">
+    <svg class="icon-enter" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
+    <svg class="icon-exit"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></svg>
+  </button>
+</div>
+
 <div class="reveal">
 <div class="slides">
 
@@ -1208,6 +1223,47 @@ func startSubscribeSpan(ctx context.Context, topic string, h []kafka.Header) (co
         maxScale: 1.6,
         plugins: [RevealHighlight, RevealNotes],
     });
+
+    /* ---------- theme toggle (light / dark) ---------- */
+    (function () {
+        const root = document.documentElement;
+        const stored = localStorage.getItem('deck-theme');
+        if (stored === 'light') root.setAttribute('data-theme', 'light');
+
+        const btn = document.getElementById('themeToggle');
+        const apply = (mode) => {
+            if (mode === 'light') root.setAttribute('data-theme', 'light');
+            else root.removeAttribute('data-theme');
+            localStorage.setItem('deck-theme', mode);
+        };
+        btn.addEventListener('click', () => {
+            const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            apply(next);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+                const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                apply(next);
+            }
+        });
+    })();
+
+    /* ---------- fullscreen toggle ---------- */
+    (function () {
+        const btn = document.getElementById('fullscreenToggle');
+        const toggle = () => {
+            if (!document.fullscreenElement) {
+                (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)?.call(document.documentElement);
+            } else {
+                (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+            }
+        };
+        btn.addEventListener('click', toggle);
+        document.addEventListener('fullscreenchange', () => {
+            document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+        });
+    })();
 </script>
 </body>
 </html>
