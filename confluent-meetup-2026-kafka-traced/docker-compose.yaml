@@ -21,6 +21,25 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks: [demo]
 
+  # One-shot: pre-create the `orders` and `alerts` topics so the very first
+  # POST after a cold `docker compose up` doesn't race Kafka's auto-create.
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [kafka]
+    networks: [demo]
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'waiting for kafka...'
+      until kafka-topics --bootstrap-server kafka:9094 --list >/dev/null 2>&1; do
+        sleep 1
+      done
+      kafka-topics --bootstrap-server kafka:9094 --create --if-not-exists --topic orders --partitions 1 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9094 --create --if-not-exists --topic alerts --partitions 1 --replication-factor 1
+      echo 'topics ready: orders, alerts'
+      "
+    restart: "no"
+
   # Traces are shipped to GoFr's hosted tracer at https://tracer.gofr.dev
   # (TRACE_EXPORTER=gofr in each service's configs/.env).
   # No local tracing backend is needed — just internet access.
@@ -56,7 +75,9 @@ services:
     ports:
       - "11000:8000"
       - "11121:2121"
-    depends_on: [kafka]
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
     networks: [demo]
 
   order-service:
@@ -66,7 +87,9 @@ services:
     ports:
       - "11001:8001"
       - "11122:2122"
-    depends_on: [kafka]
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
     networks: [demo]
 
   notification-service:
@@ -76,7 +99,9 @@ services:
     ports:
       - "11002:8002"
       - "11123:2123"
-    depends_on: [kafka]
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
     networks: [demo]
 
 networks:

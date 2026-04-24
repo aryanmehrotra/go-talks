@@ -30,7 +30,9 @@ echo "▸ Ensuring stack is up…"
 docker compose up -d --quiet-pull >/dev/null
 
 printf '▸ Waiting for api-gateway at %s ' "$GATEWAY"
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
+  # -f makes curl exit non-zero on >=400, so this also retries through the
+  # short window where Kafka topics aren't yet created (publish returns 500).
   if curl -fsS -o /dev/null -X POST "$GATEWAY/order" \
         -H "Content-Type: application/json" \
         -d '{"orderId":"probe","item":"x","qty":1}' 2>/dev/null; then
@@ -39,8 +41,8 @@ for i in $(seq 1 30); do
   fi
   printf '.'
   sleep 1
-  if [ "$i" = "30" ]; then
-    printf '\n✗ gateway not responding after 30s — check: docker compose logs api-gateway\n'
+  if [ "$i" = "60" ]; then
+    printf '\n✗ gateway not responding cleanly after 60s — check: docker compose logs api-gateway\n'
     exit 1
   fi
 done
