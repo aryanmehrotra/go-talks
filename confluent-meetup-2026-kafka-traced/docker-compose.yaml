@@ -1,0 +1,83 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks: [demo]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper]
+    ports:
+      - "11092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9094,PLAINTEXT_HOST://localhost:11092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks: [demo]
+
+  # Traces are shipped to GoFr's hosted tracer at https://tracer.gofr.dev
+  # (TRACE_EXPORTER=gofr in each service's configs/.env).
+  # No local tracing backend is needed — just internet access.
+  # To run fully offline, swap to OTLP by adding a `jaeger` service and setting
+  # TRACE_EXPORTER=otlp / TRACER_URL=jaeger:4317 in each configs/.env.
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "11090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks: [demo]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "11030:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: password
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on: [prometheus]
+    networks: [demo]
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "11000:8000"
+      - "11121:2121"
+    depends_on: [kafka]
+    networks: [demo]
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "11001:8001"
+      - "11122:2122"
+    depends_on: [kafka]
+    networks: [demo]
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    ports:
+      - "11002:8002"
+      - "11123:2123"
+    depends_on: [kafka]
+    networks: [demo]
+
+networks:
+  demo:

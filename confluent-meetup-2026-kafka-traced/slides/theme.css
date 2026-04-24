@@ -1,0 +1,662 @@
+/* ============================================================================
+ *  Kafka, Traced. — GoFr-themed reveal.js theme
+ *  Inspired by gofr.dev: slate-900 base, cyan + indigo accents,
+ *  gradient blur backgrounds, Inter / JetBrains Mono typography.
+ * ============================================================================ */
+
+:root {
+    /* palette aligned with prior deck (ppt-3) */
+    --gofr-bg:        #0E172A;          /* warm navy */
+    --gofr-bg-soft:   #0f172a;
+    --gofr-panel:     rgba(255, 255, 255, 0.04);   /* glass card surface */
+    --gofr-border:    rgba(255, 255, 255, 0.10);   /* glass card border */
+    --gofr-fg:        #e2e8f0;
+    --gofr-fg-strong: #ffffff;
+    --gofr-fg-muted:  #94a3b8;
+    --gofr-cyan:      #7dd3fc;          /* sky tone — matches ppt-3 */
+    --gofr-cyan-soft: rgba(125, 211, 252, 0.18);
+    --gofr-accent:    #00ADD8;          /* go blue accent */
+    --gofr-accent-soft: rgba(0, 173, 216, 0.18);
+    --gofr-indigo:    #818cf8;
+    --gofr-indigo-soft: rgba(129, 140, 248, 0.18);
+    --gofr-pink:      #f472b6;
+    --gofr-amber:     #fbbf24;
+    --gofr-red:       #ef4444;
+    --gofr-green:     #34d399;
+}
+
+/* ---------- reset reveal.js defaults to dark slate ------------------------- */
+.reveal-viewport,
+.reveal {
+    background: var(--gofr-bg) !important;
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--gofr-fg);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- zop.dev watermark (fixed top-right on every slide) ------------ */
+.zopdev-watermark {
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    width: 115px;
+    height: auto;
+    z-index: 1000;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+/* ---------- GoFr watermark (fixed top-left on every slide) ---------------- */
+.gofr-watermark {
+    position: fixed;
+    top: 24px;
+    left: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: -0.01em;
+    color: var(--gofr-fg-strong);
+    z-index: 1000;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.gofr-watermark-gopher {
+    width: 30px;
+    height: 30px;
+    background: url('https://gofr.dev/_next/static/media/complete-gorg-logo.bc9195c4.svg') no-repeat center / contain;
+    display: inline-block;
+}
+
+.gofr-watermark-text {
+    color: var(--gofr-fg-strong);
+}
+
+/* ---------- sponsor / event wordmark (fixed bottom-left on every slide) --- */
+.sponsor-watermark {
+    position: fixed;
+    bottom: 22px;
+    left: 32px;
+    width: 110px;
+    height: auto;
+    z-index: 1000;
+    opacity: 0.55;
+    pointer-events: none;
+    /* SVG ships with a dark navy fill (#173361) — invert to white on dark bg */
+    filter: brightness(0) invert(1);
+}
+
+/* ---------- deck controls (theme + fullscreen, bottom-right) -------------- */
+.deck-controls {
+    position: fixed;
+    bottom: 22px;
+    right: 32px;
+    display: inline-flex;
+    gap: 6px;
+    z-index: 1001;
+}
+
+.deck-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: var(--gofr-fg-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.deck-btn:hover {
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--gofr-fg-strong);
+    border-color: rgba(255, 255, 255, 0.24);
+}
+
+.deck-btn:focus-visible {
+    outline: 2px solid var(--gofr-cyan);
+    outline-offset: 2px;
+}
+
+/* show the icon that reflects the state you'd switch INTO */
+.deck-btn .icon-light { display: none; }
+.deck-btn .icon-dark  { display: inline-block; }
+[data-theme="light"] .deck-btn .icon-light { display: inline-block; }
+[data-theme="light"] .deck-btn .icon-dark  { display: none; }
+
+.deck-btn .icon-exit  { display: none; }
+.deck-btn .icon-enter { display: inline-block; }
+body.is-fullscreen .deck-btn .icon-exit  { display: inline-block; }
+body.is-fullscreen .deck-btn .icon-enter { display: none; }
+
+/* ---------- light theme overrides ---------------------------------------- */
+[data-theme="light"] {
+    --gofr-bg:        #f8fafc;
+    --gofr-bg-soft:   #ffffff;
+    --gofr-panel:     rgba(15, 23, 42, 0.04);
+    --gofr-border:    rgba(15, 23, 42, 0.12);
+    --gofr-fg:        #1e293b;
+    --gofr-fg-strong: #0f172a;
+    --gofr-fg-muted:  #64748b;
+    --gofr-cyan:      #0284c7;
+    --gofr-cyan-soft: rgba(2, 132, 199, 0.14);
+    --gofr-indigo:    #4f46e5;
+    --gofr-indigo-soft: rgba(79, 70, 229, 0.14);
+    --gofr-amber:     #b45309;
+    --gofr-red:       #dc2626;
+    --gofr-green:     #059669;
+}
+
+/* invert watermarks for light mode so they remain legible */
+[data-theme="light"] .zopdev-watermark { filter: brightness(0) invert(0.15); }
+[data-theme="light"] .sponsor-watermark { filter: none; opacity: 0.7; }
+
+[data-theme="light"] .deck-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.14);
+    color: var(--gofr-fg-muted);
+}
+[data-theme="light"] .deck-btn:hover {
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--gofr-fg-strong);
+    border-color: rgba(15, 23, 42, 0.24);
+}
+
+/* dim the background circuitry in light mode — the SVG is dark on dark */
+[data-theme="light"] .reveal-viewport::before { opacity: 0.05; filter: invert(1); }
+
+/* circuitry SVG + radial glow backdrop — matches ppt-3 */
+.reveal-viewport::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: url('https://gofr.dev/_next/static/media/hero-bg.4b4249a5.svg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.12;
+    z-index: 0;
+}
+
+.reveal-viewport::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 50% 40%, rgba(0, 173, 216, 0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 50% at 10% 5%, var(--gofr-cyan-soft), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 95% 95%, var(--gofr-indigo-soft), transparent 70%);
+    z-index: 0;
+}
+
+/* print mode (?print-pdf) renders each slide as its own page;
+   fixed backdrops are dropped — re-apply per slide. */
+.reveal.print-pdf .reveal-viewport::before,
+.reveal.print-pdf .reveal-viewport::after { display: none; }
+.reveal.print-pdf .slides > section {
+    background:
+        radial-gradient(circle at 50% 40%, rgba(0, 173, 216, 0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 50% at 10% 5%, var(--gofr-cyan-soft), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 95% 95%, var(--gofr-indigo-soft), transparent 70%),
+        var(--gofr-bg) !important;
+}
+
+.reveal .slides {
+    /* don't override reveal's own position: absolute + transform centering */
+    z-index: 1;
+    text-align: left;
+}
+
+.reveal .slides > section,
+.reveal .slides > section > section {
+    padding: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* ---------- typography ----------------------------------------------------- */
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--gofr-fg-strong);
+    text-transform: none;
+    letter-spacing: -0.03em;
+    margin: 0 0 0.4em 0;
+    font-weight: 800;
+    line-height: 1.05;
+}
+
+.reveal h1 { font-size: 4.6rem; font-weight: 900; letter-spacing: -0.045em; }
+.reveal h2 { font-size: 3rem;   font-weight: 900; letter-spacing: -0.04em;  }
+.reveal h3 { font-size: 1.85rem; font-weight: 700; }
+.reveal h4 { font-size: 1.2rem; font-weight: 600; color: var(--gofr-fg-muted); }
+
+.reveal p,
+.reveal li {
+    font-size: 1.2rem;
+    line-height: 1.55;
+    color: var(--gofr-fg);
+}
+
+.reveal em      { color: var(--gofr-cyan); font-style: normal; font-weight: 500; }
+.reveal strong  { color: var(--gofr-fg-strong); font-weight: 600; }
+.reveal a       { color: var(--gofr-cyan); text-decoration: none; border-bottom: 1px solid var(--gofr-cyan-soft); }
+.reveal a:hover { color: var(--gofr-fg-strong); }
+
+.reveal ul, .reveal ol { margin-left: 1.4em; }
+.reveal li + li { margin-top: 0.35em; }
+
+/* ---------- code ----------------------------------------------------------- */
+.reveal pre {
+    width: 100%;
+    min-width: 0;
+    box-shadow: none;
+    background: var(--gofr-panel);
+    border: 1px solid var(--gofr-border);
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin: 0.6rem 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
+.reveal pre code {
+    padding: 0;
+    background: transparent;
+    color: var(--gofr-fg);
+    max-height: none;
+    overflow: visible;
+    border-radius: 0;
+}
+
+/* compact variant for dense code slides */
+.reveal pre.compact {
+    padding: 0.7rem 1rem;
+    margin: 0.3rem 0;
+}
+.reveal pre.compact code { font-size: 0.66rem; line-height: 1.4; }
+
+.reveal :not(pre) > code {
+    background: var(--gofr-panel);
+    color: var(--gofr-cyan);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--gofr-border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+}
+
+/* hand-rolled syntax tinting (tokens highlighted by hljs) */
+.hljs-keyword,
+.hljs-built_in   { color: var(--gofr-indigo); }
+.hljs-string     { color: var(--gofr-green); }
+.hljs-number     { color: var(--gofr-amber); }
+.hljs-comment    { color: var(--gofr-fg-muted); font-style: italic; }
+.hljs-function,
+.hljs-title      { color: var(--gofr-cyan); }
+.hljs-type,
+.hljs-class      { color: var(--gofr-pink); }
+.hljs-meta       { color: var(--gofr-amber); }
+
+/* ---------- layout primitives --------------------------------------------- */
+.slide-pad {
+    padding: 44px 80px 72px 80px;   /* bottom extra for footer chrome */
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.title-slide {
+    text-align: left;
+    align-items: flex-start;
+}
+
+.title-slide h1 {
+    font-size: 7rem;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+    background: linear-gradient(135deg, var(--gofr-fg-strong) 0%, var(--gofr-cyan) 55%, var(--gofr-indigo) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.7rem;
+}
+
+.title-slide .subtitle {
+    font-size: 1.65rem;
+    color: var(--gofr-fg-muted);
+    max-width: 820px;
+    line-height: 1.4;
+    margin-bottom: 2.2rem;
+    letter-spacing: -0.015em;
+}
+
+.title-slide .speaker {
+    color: var(--gofr-fg-muted);
+    font-size: 1rem;
+}
+
+.title-slide .speaker strong { color: var(--gofr-fg-strong); }
+
+/* GoFr wordmark — used on every slide footer + title */
+.gofr-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    color: var(--gofr-fg-strong);
+}
+
+.gofr-mark .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 0;
+    background: url('https://gofr.dev/_next/static/media/complete-gorg-logo.bc9195c4.svg') no-repeat center / contain;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.gofr-mark .accent { color: var(--gofr-cyan); }
+
+/* footer / chrome on every slide */
+.slide-footer {
+    position: absolute;
+    bottom: 24px;
+    left: 80px;
+    right: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--gofr-fg-muted);
+    z-index: 2;
+}
+
+.slide-footer .right {
+    color: var(--gofr-fg-muted);
+}
+
+/* eyebrow / section label — cyan pill from ppt-3 */
+.eyebrow {
+    display: inline-block;
+    align-self: flex-start;   /* don't stretch in flex-column parents */
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--gofr-cyan);
+    background: rgba(125, 211, 252, 0.10);
+    border: 1px solid rgba(125, 211, 252, 0.30);
+    padding: 5px 14px;
+    border-radius: 999px;
+    margin-bottom: 1.1rem;
+}
+
+.eyebrow.indigo {
+    color: var(--gofr-indigo);
+    background: var(--gofr-indigo-soft);
+}
+
+.eyebrow.amber {
+    color: var(--gofr-amber);
+    background: rgba(251, 191, 36, 0.15);
+}
+
+.eyebrow.green {
+    color: var(--gofr-green);
+    background: rgba(52, 211, 153, 0.15);
+}
+
+/* two-column layout */
+.cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.6rem;
+    align-items: stretch;
+    margin-top: 0.6rem;
+}
+
+.cols.tight     { gap: 1rem; }
+.cols.weighted  { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.cols.flipped   { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+
+/* force grid items to respect cell width — prevents <pre> min-content from blowing out the column */
+.cols > *       { min-width: 0; overflow: hidden; }
+
+.col-card {
+    border: 1px solid var(--gofr-border);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1.2rem 1.4rem;
+    backdrop-filter: blur(8px);
+    transition: border-color 200ms ease, background 200ms ease;
+}
+
+.col-card:hover {
+    border-color: rgba(125, 211, 252, 0.40);
+    background: rgba(125, 211, 252, 0.05);
+}
+
+.col-card h4 {
+    margin: 0 0 0.6rem 0;
+    color: var(--gofr-fg-strong);
+}
+
+.col-card ul,
+.col-card ol,
+.col-card p { font-size: 1rem; line-height: 1.5; margin-left: 1.2em; }
+.col-card ul { margin-top: 0.2rem; }
+
+.col-card.bad   { border-color: rgba(251, 113, 133, 0.4); }
+.col-card.good  { border-color: rgba(52, 211, 153, 0.4); }
+
+/* big number callout */
+.bignum {
+    font-size: 7rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--gofr-cyan), var(--gofr-indigo));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+}
+
+.bignum-label {
+    color: var(--gofr-fg-muted);
+    font-size: 1.1rem;
+    margin-top: 0.4rem;
+}
+
+/* tally row used for line counts */
+.tally {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 0.6rem 1.2rem;
+    align-items: center;
+    margin-top: 0.4rem;
+}
+
+.tally .head {
+    font-size: 0.7rem;
+    color: var(--gofr-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    border-bottom: 1px solid var(--gofr-border);
+    padding-bottom: 0.4rem;
+}
+
+.tally .lhs   { color: var(--gofr-fg); font-size: 0.95rem; }
+.tally .raw   { color: var(--gofr-red); font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
+.tally .gofr  { color: var(--gofr-green); font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
+.tally .total { font-weight: 700; padding-top: 0.5rem; border-top: 1px solid var(--gofr-border); }
+
+/* feature pill grid */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.feature-pill {
+    border: 1px solid var(--gofr-border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    backdrop-filter: blur(8px);
+    transition: border-color 200ms ease, background 200ms ease;
+}
+
+.feature-pill:hover {
+    border-color: rgba(125, 211, 252, 0.40);
+    background: rgba(125, 211, 252, 0.05);
+}
+
+.feature-pill .fp-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.feature-pill .fp-title {
+    color: var(--gofr-fg-strong);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.feature-pill .fp-sub {
+    color: var(--gofr-fg-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+/* all inline SVGs scale to their column width (prevents intrinsic-size rendering) */
+.reveal svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* arch diagram */
+.arch {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+/* call-out boxes */
+.callout {
+    border-left: 3px solid var(--gofr-cyan);
+    background: rgba(34, 211, 238, 0.06);
+    padding: 0.8rem 1.1rem;
+    border-radius: 0 10px 10px 0;
+    margin: 0.8rem 0;
+    color: var(--gofr-fg);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.callout.indigo { border-color: var(--gofr-indigo); background: rgba(129, 140, 248, 0.06); }
+.callout.amber  { border-color: var(--gofr-amber);  background: rgba(251, 191, 36, 0.06); }
+
+/* terminal block */
+.term {
+    background: #050a14;
+    border: 1px solid var(--gofr-border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--gofr-fg);
+    margin: 0.8rem 0;
+}
+
+.term .prompt { color: var(--gofr-cyan); }
+.term .output { color: var(--gofr-fg-muted); }
+
+/* progress bar styling */
+.reveal .progress {
+    color: var(--gofr-cyan);
+    height: 3px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* slide number */
+.reveal .slide-number {
+    background: transparent;
+    color: var(--gofr-fg-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    right: 1.2rem;
+    bottom: 1rem;
+}
+
+/* QR / link card on closing slide */
+.link-card {
+    border: 1px solid var(--gofr-border);
+    border-radius: 20px;
+    padding: 1.3rem 1.6rem;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    backdrop-filter: blur(8px);
+}
+
+.link-card .lc-label { color: var(--gofr-fg-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; }
+.link-card .lc-link  { color: var(--gofr-cyan); font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; word-break: break-all; }
+
+/* span with red strike for "missing" annotations */
+.missing {
+    color: var(--gofr-red);
+    background: rgba(251, 113, 133, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.kept {
+    color: var(--gofr-green);
+    background: rgba(52, 211, 153, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* heading rule */
+.rule {
+    width: 56px;
+    height: 3px;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    background: linear-gradient(90deg, var(--gofr-cyan), var(--gofr-indigo));
+    border-radius: 2px;
+    margin: 0 0 1rem 0;
+}
