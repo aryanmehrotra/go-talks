@@ -1,0 +1,46 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "rate(app_pubsub_publish_total_count[1m])", "legendFormat": "{{job}} publish", "refId": "A"},
+        {"expr": "rate(app_pubsub_subscribe_total_count[1m])", "legendFormat": "{{job}} subscribe", "refId": "B"}
+      ],
+      "title": "Pub/Sub throughput (msg/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "app_pubsub_publish_total_count", "legendFormat": "{{job}} publish total", "refId": "A"},
+        {"expr": "app_pubsub_subscribe_total_count", "legendFormat": "{{job}} subscribe total", "refId": "B"}
+      ],
+      "title": "Total messages",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "tags": ["gofr", "kafka", "pubsub"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timezone": "",
+  "title": "GoFr Pub/Sub",
+  "uid": "gofr-pubsub",
+  "version": 1
+}

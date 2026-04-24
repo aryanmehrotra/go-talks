@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kafka, Traced. — GoFr</title>
+
+<!-- reveal.js (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+<!-- syntax highlighting -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css" />
+<!-- fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- GoFr theme -->
+<link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+
+<!-- GoFr watermark on every slide (top-left) -->
+<div class="gofr-watermark" aria-label="GoFr.dev">
+  <span class="gofr-watermark-gopher"></span>
+  <span class="gofr-watermark-text">GoFr.dev</span>
+</div>
+
+<!-- zop.dev watermark on every slide (top-right) -->
+<img class="zopdev-watermark" src="zopdev-logo.svg" alt="zop.dev" />
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================================================
+     1 · TITLE
+============================================================ -->
+<section data-transition="fade">
+  <div class="slide-pad title-slide">
+    <div class="gofr-mark" style="margin-bottom: 2.4rem;">
+      <span class="dot"></span>
+      <span>Go<span class="accent">Fr</span></span>
+    </div>
+    <h1>Kafka, Traced.</h1>
+    <p class="subtitle">One trace ID. Three services. Zero plumbing.</p>
+    <p class="speaker">
+      Confluent Meetup
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">1 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     2 · WHOAMI
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">whoami</span>
+    <h3>Who's talking.</h3>
+    <div class="rule"></div>
+    <div class="cols" style="margin-top: 1.2rem; gap: 2.4rem;">
+      <div>
+        <h4 style="font-size: 1.6rem; margin: 0 0 0.2rem;">Aryan Mehrotra</h4>
+        <p style="color: var(--gofr-cyan); font-size: 0.95rem; margin: 0 0 0.8rem; letter-spacing: 0.02em;">SSDE @ zop.dev · Maintainer, GoFr</p>
+        <ul style="margin: 0;">
+          <li>Works on <strong>GoFr</strong> — an opinionated Go framework for accelerated microservice development.</li>
+          <li>Cares a lot about making infra <em>boring</em>: Kafka, OTel, deploys.</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="font-size: 1.6rem; margin: 0 0 0.2rem;">Piyush Singh</h4>
+        <p style="color: var(--gofr-cyan); font-size: 0.95rem; margin: 0 0 0.8rem; letter-spacing: 0.02em;">SDE-2 @ zop.dev</p>
+        <ul style="margin: 0;">
+          <li>Maintainer of <strong>OpenTofu</strong> modules that run the same infra across every cloud provider.</li>
+          <li>Maintains a <strong>Helm chart</strong> — one deploy path, any Kubernetes.</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top: 1.4rem; color: var(--gofr-fg-muted); font-size: 1.05rem;">
+      Today: how to get a single trace ID across an entire Kafka pipeline — without writing a line of tracing code.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">2 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     3 · THE JOB
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">the brief</span>
+    <h3>Build three services. Connect them with Kafka. <br/>Trace them end-to-end.</h3>
+    <div class="rule"></div>
+
+    <svg class="arch" viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="brokerGrad" x1="0" x2="1">
+          <stop offset="0" stop-color="#22d3ee" stop-opacity="0.25"/>
+          <stop offset="1" stop-color="#818cf8" stop-opacity="0.25"/>
+        </linearGradient>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+        </marker>
+      </defs>
+      <!-- service boxes -->
+      <g font-family="Inter, sans-serif">
+        <rect x="20"  y="60" width="220" height="110" rx="14" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="130" y="100" fill="#f8fafc" font-size="18" font-weight="600" text-anchor="middle">api-gateway</text>
+        <text x="130" y="125" fill="#94a3b8" font-size="13" text-anchor="middle">HTTP :8000</text>
+        <text x="130" y="148" fill="#22d3ee" font-size="12" text-anchor="middle">POST /order</text>
+
+        <rect x="440" y="60" width="220" height="110" rx="14" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="550" y="100" fill="#f8fafc" font-size="18" font-weight="600" text-anchor="middle">order-service</text>
+        <text x="550" y="125" fill="#94a3b8" font-size="13" text-anchor="middle">subscribe → publish</text>
+        <text x="550" y="148" fill="#22d3ee" font-size="12" text-anchor="middle">orders → alerts</text>
+
+        <rect x="860" y="60" width="220" height="110" rx="14" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="970" y="100" fill="#f8fafc" font-size="18" font-weight="600" text-anchor="middle">notification-svc</text>
+        <text x="970" y="125" fill="#94a3b8" font-size="13" text-anchor="middle">subscribe</text>
+        <text x="970" y="148" fill="#22d3ee" font-size="12" text-anchor="middle">log / Slack</text>
+
+        <!-- kafka pipes -->
+        <rect x="260" y="95" width="160" height="40" rx="20" fill="url(#brokerGrad)" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="340" y="120" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">Kafka · orders</text>
+
+        <rect x="680" y="95" width="160" height="40" rx="20" fill="url(#brokerGrad)" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="760" y="120" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">Kafka · alerts</text>
+
+        <line x1="240" y1="115" x2="260" y2="115" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="420" y1="115" x2="440" y2="115" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="660" y1="115" x2="680" y2="115" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="840" y1="115" x2="860" y2="115" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr)"/>
+      </g>
+    </svg>
+
+    <div class="callout amber" style="margin-top: 1rem;">
+      The deliverable: <strong>one Jaeger trace</strong> showing the request fan out from HTTP → Kafka → Kafka → log line. Sounds easy. It is <em>not</em>.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">3 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     4 · KAFKA 101 — THE THREE ROLES
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 1</span>
+    <h3>Three roles. One pipe in the middle.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 320" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <defs>
+        <linearGradient id="brokerGrad101" x1="0" x2="1">
+          <stop offset="0" stop-color="#22d3ee" stop-opacity="0.25"/>
+          <stop offset="1" stop-color="#818cf8" stop-opacity="0.25"/>
+        </linearGradient>
+        <marker id="arrK1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+        </marker>
+      </defs>
+      <g font-family="Inter, sans-serif">
+        <!-- producers -->
+        <rect x="30"  y="40"  width="200" height="60" rx="10" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="130" y="65"  fill="#f8fafc" font-size="15" font-weight="600" text-anchor="middle">Producer A</text>
+        <text x="130" y="85"  fill="#94a3b8" font-size="12" text-anchor="middle">writes to topic</text>
+        <rect x="30"  y="130" width="200" height="60" rx="10" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="130" y="155" fill="#f8fafc" font-size="15" font-weight="600" text-anchor="middle">Producer B</text>
+        <text x="130" y="175" fill="#94a3b8" font-size="12" text-anchor="middle">writes to topic</text>
+
+        <!-- broker block -->
+        <rect x="370" y="40"  width="360" height="240" rx="14" fill="url(#brokerGrad101)" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="550" y="70"  fill="#f8fafc" font-size="16" font-weight="600" text-anchor="middle">Kafka Broker</text>
+        <text x="550" y="90"  fill="#94a3b8" font-size="12" text-anchor="middle">stores ordered, partitioned logs</text>
+        <!-- topic inside -->
+        <rect x="400" y="115" width="300" height="140" rx="8" fill="#0b1529" stroke="#818cf8" stroke-opacity="0.5"/>
+        <text x="550" y="138" fill="#e2e8f0" font-size="13" font-weight="600" text-anchor="middle">topic: "orders"</text>
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">
+          <rect x="415" y="155" width="40" height="28" rx="4" fill="#162238" stroke="#334155"/>
+          <text x="435" y="173" text-anchor="middle">m0</text>
+          <rect x="460" y="155" width="40" height="28" rx="4" fill="#162238" stroke="#334155"/>
+          <text x="480" y="173" text-anchor="middle">m1</text>
+          <rect x="505" y="155" width="40" height="28" rx="4" fill="#162238" stroke="#334155"/>
+          <text x="525" y="173" text-anchor="middle">m2</text>
+          <rect x="550" y="155" width="40" height="28" rx="4" fill="#162238" stroke="#334155"/>
+          <text x="570" y="173" text-anchor="middle">m3</text>
+          <rect x="595" y="155" width="40" height="28" rx="4" fill="#162238" stroke="#334155"/>
+          <text x="615" y="173" text-anchor="middle">m4</text>
+          <rect x="640" y="155" width="40" height="28" rx="4" fill="#22d3ee" fill-opacity="0.2" stroke="#22d3ee"/>
+          <text x="660" y="173" fill="#22d3ee" text-anchor="middle">m5</text>
+        </g>
+        <text x="550" y="210" fill="#94a3b8" font-size="11" text-anchor="middle">append-only log · messages keep their order forever</text>
+        <text x="550" y="232" fill="#22d3ee" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">offset: 0 → 5 (newest)</text>
+
+        <!-- consumers -->
+        <rect x="870" y="40"  width="200" height="60" rx="10" fill="#111c33" stroke="#818cf8" stroke-opacity="0.5"/>
+        <text x="970" y="65"  fill="#f8fafc" font-size="15" font-weight="600" text-anchor="middle">Consumer X</text>
+        <text x="970" y="85"  fill="#94a3b8" font-size="12" text-anchor="middle">reads, tracks offset</text>
+        <rect x="870" y="130" width="200" height="60" rx="10" fill="#111c33" stroke="#818cf8" stroke-opacity="0.5"/>
+        <text x="970" y="155" fill="#f8fafc" font-size="15" font-weight="600" text-anchor="middle">Consumer Y</text>
+        <text x="970" y="175" fill="#94a3b8" font-size="12" text-anchor="middle">reads, tracks offset</text>
+
+        <!-- arrows -->
+        <line x1="230" y1="70"  x2="370" y2="130" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrK1)"/>
+        <line x1="230" y1="160" x2="370" y2="170" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrK1)"/>
+        <line x1="730" y1="130" x2="870" y2="70"  stroke="#818cf8" stroke-width="1.4" marker-end="url(#arrK1)"/>
+        <line x1="730" y1="170" x2="870" y2="160" stroke="#818cf8" stroke-width="1.4" marker-end="url(#arrK1)"/>
+      </g>
+    </svg>
+
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.4rem;">
+      Producers never talk to consumers directly. The <strong>broker</strong> stores everything, and consumers pull at their own pace.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">4 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     5 · TOPIC = APPEND-ONLY LOG
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 2</span>
+    <h3>A topic is an append-only log. Nothing more.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 260" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <defs>
+        <marker id="arrK2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+        </marker>
+      </defs>
+      <g font-family="Inter, sans-serif">
+        <!-- producer end -->
+        <rect x="30"  y="90"  width="160" height="60" rx="10" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="110" y="115" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">producer</text>
+        <text x="110" y="135" fill="#94a3b8" font-size="11" text-anchor="middle">appends →</text>
+
+        <!-- log slots -->
+        <g font-family="JetBrains Mono, monospace">
+          <rect x="230" y="90" width="70" height="60" rx="6" fill="#162238" stroke="#334155"/>
+          <text x="265" y="120" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">m0</text>
+          <text x="265" y="138" fill="#94a3b8" font-size="10" text-anchor="middle">offset 0</text>
+
+          <rect x="305" y="90" width="70" height="60" rx="6" fill="#162238" stroke="#334155"/>
+          <text x="340" y="120" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">m1</text>
+          <text x="340" y="138" fill="#94a3b8" font-size="10" text-anchor="middle">offset 1</text>
+
+          <rect x="380" y="90" width="70" height="60" rx="6" fill="#162238" stroke="#334155"/>
+          <text x="415" y="120" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">m2</text>
+          <text x="415" y="138" fill="#94a3b8" font-size="10" text-anchor="middle">offset 2</text>
+
+          <rect x="455" y="90" width="70" height="60" rx="6" fill="#162238" stroke="#334155"/>
+          <text x="490" y="120" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">m3</text>
+          <text x="490" y="138" fill="#94a3b8" font-size="10" text-anchor="middle">offset 3</text>
+
+          <rect x="530" y="90" width="70" height="60" rx="6" fill="#162238" stroke="#334155"/>
+          <text x="565" y="120" fill="#e2e8f0" font-size="13" text-anchor="middle" font-weight="600">m4</text>
+          <text x="565" y="138" fill="#94a3b8" font-size="10" text-anchor="middle">offset 4</text>
+
+          <rect x="605" y="90" width="70" height="60" rx="6" fill="#22d3ee" fill-opacity="0.15" stroke="#22d3ee"/>
+          <text x="640" y="120" fill="#22d3ee" font-size="13" text-anchor="middle" font-weight="600">m5</text>
+          <text x="640" y="138" fill="#22d3ee" font-size="10" text-anchor="middle">offset 5</text>
+
+          <rect x="680" y="90" width="70" height="60" rx="6" fill="#0b1529" stroke="#334155" stroke-dasharray="3 3"/>
+          <text x="715" y="122" fill="#64748b" font-size="13" text-anchor="middle">…</text>
+          <text x="715" y="138" fill="#64748b" font-size="10" text-anchor="middle">next</text>
+        </g>
+
+        <!-- consumer cursor -->
+        <rect x="830" y="90"  width="200" height="60" rx="10" fill="#111c33" stroke="#818cf8" stroke-opacity="0.5"/>
+        <text x="930" y="115" fill="#f8fafc" font-size="14" font-weight="600" text-anchor="middle">consumer</text>
+        <text x="930" y="135" fill="#818cf8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">cursor = offset 5</text>
+
+        <line x1="190" y1="120" x2="225" y2="120" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrK2)"/>
+        <line x1="750" y1="120" x2="825" y2="120" stroke="#818cf8" stroke-width="1.4" marker-end="url(#arrK2)"/>
+
+        <text x="560" y="195" fill="#94a3b8" font-size="12" text-anchor="middle">producer only ever appends to the right · consumers remember their own position</text>
+        <text x="560" y="215" fill="#94a3b8" font-size="12" text-anchor="middle">messages are kept for a <em>retention window</em> — not a queue, a log</text>
+      </g>
+    </svg>
+
+    <div class="callout" style="margin-top: 0.6rem;">
+      This is why Kafka is cheap to <em>replay</em>: rewind the cursor, get every message again. The broker never "deletes on read".
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">5 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     6 · PARTITIONS
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 3</span>
+    <h3>Partitions — one topic, sharded across brokers.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 320" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <g font-family="Inter, sans-serif">
+        <text x="40" y="30" fill="#94a3b8" font-size="13" font-weight="600">topic "orders" — 3 partitions, replicated across 3 brokers</text>
+
+        <!-- broker 1 -->
+        <rect x="40"  y="50" width="320" height="240" rx="14" fill="#0b1529" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="200" y="78" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">Broker 1</text>
+        <rect x="70"  y="100" width="260" height="50" rx="6" fill="#162238" stroke="#22d3ee" stroke-opacity="0.6"/>
+        <text x="200" y="122" fill="#22d3ee" font-size="12" font-weight="600" text-anchor="middle">partition 0 · LEADER</text>
+        <text x="200" y="140" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">m0 · m3 · m6 · …</text>
+        <rect x="70"  y="165" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="200" y="187" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 1 · replica</text>
+        <rect x="70"  y="230" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="200" y="252" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 2 · replica</text>
+
+        <!-- broker 2 -->
+        <rect x="390" y="50" width="320" height="240" rx="14" fill="#0b1529" stroke="#818cf8" stroke-opacity="0.4"/>
+        <text x="550" y="78" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">Broker 2</text>
+        <rect x="420" y="100" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="550" y="122" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 0 · replica</text>
+        <rect x="420" y="165" width="260" height="50" rx="6" fill="#162238" stroke="#818cf8" stroke-opacity="0.6"/>
+        <text x="550" y="187" fill="#818cf8" font-size="12" font-weight="600" text-anchor="middle">partition 1 · LEADER</text>
+        <text x="550" y="205" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">m1 · m4 · m7 · …</text>
+        <rect x="420" y="230" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="550" y="252" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 2 · replica</text>
+
+        <!-- broker 3 -->
+        <rect x="740" y="50" width="320" height="240" rx="14" fill="#0b1529" stroke="#34d399" stroke-opacity="0.4"/>
+        <text x="900" y="78" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">Broker 3</text>
+        <rect x="770" y="100" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="900" y="122" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 0 · replica</text>
+        <rect x="770" y="165" width="260" height="50" rx="6" fill="#162238" stroke="#334155"/>
+        <text x="900" y="187" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">partition 1 · replica</text>
+        <rect x="770" y="230" width="260" height="50" rx="6" fill="#162238" stroke="#34d399" stroke-opacity="0.6"/>
+        <text x="900" y="252" fill="#34d399" font-size="12" font-weight="600" text-anchor="middle">partition 2 · LEADER</text>
+        <text x="900" y="270" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">m2 · m5 · m8 · …</text>
+      </g>
+    </svg>
+
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.4rem;">
+      Partition is the unit of <strong>parallelism</strong> (more partitions = more consumers) and of <strong>order</strong> (order is per-partition, not topic-wide). Key → hash → partition.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">6 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     7 · CONSUMER GROUPS
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 4</span>
+    <h3>Consumer groups — scale a service horizontally.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <defs>
+        <marker id="arrK4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#818cf8"/>
+        </marker>
+      </defs>
+      <g font-family="Inter, sans-serif">
+        <!-- topic with 3 partitions -->
+        <rect x="40"  y="40" width="380" height="200" rx="14" fill="#0b1529" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="230" y="68" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">topic "orders"</text>
+        <rect x="70"  y="85"  width="320" height="40" rx="6" fill="#162238" stroke="#22d3ee" stroke-opacity="0.5"/>
+        <text x="230" y="110" fill="#22d3ee" font-size="12" text-anchor="middle" font-family="JetBrains Mono, monospace">partition 0</text>
+        <rect x="70"  y="135" width="320" height="40" rx="6" fill="#162238" stroke="#818cf8" stroke-opacity="0.5"/>
+        <text x="230" y="160" fill="#818cf8" font-size="12" text-anchor="middle" font-family="JetBrains Mono, monospace">partition 1</text>
+        <rect x="70"  y="185" width="320" height="40" rx="6" fill="#162238" stroke="#34d399" stroke-opacity="0.5"/>
+        <text x="230" y="210" fill="#34d399" font-size="12" text-anchor="middle" font-family="JetBrains Mono, monospace">partition 2</text>
+
+        <!-- consumer group -->
+        <rect x="600" y="30" width="460" height="220" rx="14" fill="#0b1529" stroke="#818cf8" stroke-opacity="0.3" stroke-dasharray="6 4"/>
+        <text x="830" y="56" fill="#e2e8f0" font-size="13" font-weight="600" text-anchor="middle">consumer group: "order-service"</text>
+
+        <rect x="620" y="75"  width="200" height="50" rx="8" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.6"/>
+        <text x="720" y="98"  fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">pod A</text>
+        <text x="720" y="116" fill="#22d3ee" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">→ partition 0</text>
+
+        <rect x="620" y="135" width="200" height="50" rx="8" fill="#111c33" stroke="#818cf8" stroke-opacity="0.6"/>
+        <text x="720" y="158" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">pod B</text>
+        <text x="720" y="176" fill="#818cf8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">→ partition 1</text>
+
+        <rect x="620" y="195" width="200" height="50" rx="8" fill="#111c33" stroke="#34d399" stroke-opacity="0.6"/>
+        <text x="720" y="218" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">pod C</text>
+        <text x="720" y="236" fill="#34d399" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">→ partition 2</text>
+
+        <text x="950" y="120" fill="#94a3b8" font-size="12" text-anchor="middle">each partition</text>
+        <text x="950" y="138" fill="#94a3b8" font-size="12" text-anchor="middle">→ exactly one pod</text>
+        <text x="950" y="170" fill="#94a3b8" font-size="12" text-anchor="middle">add a pod →</text>
+        <text x="950" y="188" fill="#94a3b8" font-size="12" text-anchor="middle"><em>rebalance</em></text>
+
+        <line x1="390" y1="105" x2="620" y2="100" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrK4)"/>
+        <line x1="390" y1="155" x2="620" y2="160" stroke="#818cf8" stroke-width="1.2" marker-end="url(#arrK4)"/>
+        <line x1="390" y1="205" x2="620" y2="220" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrK4)"/>
+      </g>
+    </svg>
+
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.3rem;">
+      All pods share <code>group.id</code>. Kafka assigns partitions to pods so every message is handled exactly once <em>per group</em>. Adding or losing a pod triggers a <strong>rebalance</strong>.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">7 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     8 · FAN-OUT ACROSS GROUPS
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 5</span>
+    <h3>Fan-out — many teams, same topic, independent offsets.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 290" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <defs>
+        <marker id="arrK5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+        </marker>
+      </defs>
+      <g font-family="Inter, sans-serif">
+        <!-- topic -->
+        <rect x="30"  y="100" width="260" height="100" rx="14" fill="#0b1529" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="160" y="135" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">topic "orders"</text>
+        <text x="160" y="158" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">m0 · m1 · m2 · m3 · …</text>
+        <text x="160" y="178" fill="#94a3b8" font-size="11" text-anchor="middle">one copy on the broker</text>
+
+        <!-- four groups -->
+        <g>
+          <rect x="430" y="20"  width="260" height="56" rx="10" fill="#111c33" stroke="#22d3ee" stroke-opacity="0.6"/>
+          <text x="560" y="42"  fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">group: order-service</text>
+          <text x="560" y="62"  fill="#22d3ee" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">cursor = 5</text>
+
+          <rect x="430" y="86"  width="260" height="56" rx="10" fill="#111c33" stroke="#818cf8" stroke-opacity="0.6"/>
+          <text x="560" y="108" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">group: analytics</text>
+          <text x="560" y="128" fill="#818cf8" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">cursor = 3</text>
+
+          <rect x="430" y="152" width="260" height="56" rx="10" fill="#111c33" stroke="#34d399" stroke-opacity="0.6"/>
+          <text x="560" y="174" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">group: audit-log</text>
+          <text x="560" y="194" fill="#34d399" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">cursor = 0  (replay!)</text>
+
+          <rect x="430" y="218" width="260" height="56" rx="10" fill="#111c33" stroke="#fbbf24" stroke-opacity="0.6"/>
+          <text x="560" y="240" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">group: fraud-check</text>
+          <text x="560" y="260" fill="#fbbf24" font-size="11" text-anchor="middle" font-family="JetBrains Mono, monospace">cursor = 5</text>
+        </g>
+
+        <line x1="290" y1="140" x2="425" y2="45"  stroke="#94a3b8" stroke-width="1" marker-end="url(#arrK5)"/>
+        <line x1="290" y1="150" x2="425" y2="110" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrK5)"/>
+        <line x1="290" y1="160" x2="425" y2="175" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrK5)"/>
+        <line x1="290" y1="170" x2="425" y2="240" stroke="#94a3b8" stroke-width="1" marker-end="url(#arrK5)"/>
+
+        <text x="870" y="100" fill="#94a3b8" font-size="12">same message m5</text>
+        <text x="870" y="118" fill="#94a3b8" font-size="12">is delivered to <em>every</em></text>
+        <text x="870" y="136" fill="#94a3b8" font-size="12">group — each at its</text>
+        <text x="870" y="154" fill="#94a3b8" font-size="12">own pace.</text>
+        <text x="870" y="188" fill="#fbbf24" font-size="12">this is why we need</text>
+        <text x="870" y="206" fill="#fbbf24" font-size="12"><strong>span links</strong>, not</text>
+        <text x="870" y="224" fill="#fbbf24" font-size="12">just parent/child.</text>
+      </g>
+    </svg>
+
+    <div class="callout indigo" style="margin-top: 0.4rem;">
+      One publish → N consumers, each with its own cursor. Parent/child tree can't model that; <strong>span links</strong> can.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">8 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     9 · MESSAGE ANATOMY
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">kafka 101 · part 6</span>
+    <h3>What's inside one Kafka message?</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.4rem;">
+      <g font-family="Inter, sans-serif">
+        <rect x="40" y="30" width="1020" height="220" rx="14" fill="#0b1529" stroke="#22d3ee" stroke-opacity="0.4"/>
+        <text x="550" y="60" fill="#e2e8f0" font-size="15" font-weight="600" text-anchor="middle">kafka.Message</text>
+
+        <!-- key -->
+        <rect x="70"  y="80"  width="220" height="150" rx="8" fill="#162238" stroke="#334155"/>
+        <text x="180" y="104" fill="#22d3ee" font-size="12" font-weight="600" text-anchor="middle">key</text>
+        <text x="180" y="132" fill="#94a3b8" font-size="11" text-anchor="middle">hash → partition</text>
+        <text x="180" y="162" fill="#e2e8f0" font-size="13" text-anchor="middle" font-family="JetBrains Mono, monospace">"ORD-42"</text>
+        <text x="180" y="200" fill="#64748b" font-size="10" text-anchor="middle">optional · ordering</text>
+
+        <!-- value -->
+        <rect x="300" y="80"  width="300" height="150" rx="8" fill="#162238" stroke="#334155"/>
+        <text x="450" y="104" fill="#818cf8" font-size="12" font-weight="600" text-anchor="middle">value (payload)</text>
+        <text x="450" y="128" fill="#94a3b8" font-size="11" text-anchor="middle">opaque bytes to Kafka</text>
+        <g font-family="JetBrains Mono, monospace" font-size="11" fill="#e2e8f0">
+          <text x="320" y="160">{</text>
+          <text x="335" y="180">"orderId":"ORD-42",</text>
+          <text x="335" y="198">"item":"sticker",</text>
+          <text x="335" y="216">"qty": 3</text>
+          <text x="320" y="234">}</text>
+        </g>
+
+        <!-- headers -->
+        <rect x="610" y="80"  width="300" height="150" rx="8" fill="#162238" stroke="#fbbf24" stroke-opacity="0.6"/>
+        <text x="760" y="104" fill="#fbbf24" font-size="12" font-weight="600" text-anchor="middle">headers  ← where traces live</text>
+        <text x="760" y="124" fill="#94a3b8" font-size="11" text-anchor="middle">list of key/value pairs</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="#e2e8f0">
+          <text x="630" y="150">traceparent:</text>
+          <text x="630" y="166" fill="#fbbf24">00-c3f98…5b9d-…def-01</text>
+          <text x="630" y="188">tracestate:  …</text>
+          <text x="630" y="210">content-type: application/json</text>
+        </g>
+
+        <!-- offset/timestamp -->
+        <rect x="920" y="80"  width="120" height="150" rx="8" fill="#162238" stroke="#334155"/>
+        <text x="980" y="104" fill="#34d399" font-size="12" font-weight="600" text-anchor="middle">offset</text>
+        <text x="980" y="126" fill="#e2e8f0" font-size="13" text-anchor="middle" font-family="JetBrains Mono, monospace">42</text>
+        <text x="980" y="160" fill="#34d399" font-size="12" font-weight="600" text-anchor="middle">timestamp</text>
+        <text x="980" y="182" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="JetBrains Mono, monospace">ms epoch</text>
+        <text x="980" y="200" fill="#94a3b8" font-size="10" text-anchor="middle">partition #</text>
+        <text x="980" y="218" fill="#e2e8f0" font-size="13" text-anchor="middle" font-family="JetBrains Mono, monospace">1</text>
+      </g>
+    </svg>
+
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.3rem;">
+      Headers are a free-form bag. Kafka ignores what's inside — <strong>we smuggle <code>traceparent</code> through here</strong>. That's the whole trick.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">9 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     10 · RAW PRODUCER
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow amber">without GoFr · part 1</span>
+    <h3>The producer, by hand.</h3>
+    <div class="rule"></div>
+    <div class="cols weighted">
+      <div>
+        <pre><code class="language-go" data-trim>w := &kafka.Writer{
+    Addr:         kafka.TCP("localhost:9092"),
+    Topic:        "orders",
+    Balancer:     &kafka.LeastBytes{},
+    BatchSize:    100,
+    BatchTimeout: 10 * time.Millisecond,
+    RequiredAcks: kafka.RequireAll,
+    Async:        false,
+}
+defer w.Close()
+
+err := w.WriteMessages(ctx, kafka.Message{
+    Key:   []byte(orderID),
+    Value: payload,
+})
+if err != nil {
+    log.Printf("publish: %v", err)
+}</code></pre>
+      </div>
+      <div class="col-card bad">
+        <h4>What's missing</h4>
+        <ul>
+          <li><span class="missing">no tracing</span> — trace ID dies at the broker</li>
+          <li><span class="missing">no metrics</span> — hand-roll Prometheus counters</li>
+          <li><span class="missing">no health</span> — implement <code>/health</code> yourself</li>
+          <li><span class="missing">no graceful shutdown</span> — wire up SIGTERM</li>
+          <li><span class="missing">no retries</span> — beyond the writer's basics</li>
+        </ul>
+        <p class="fp-sub" style="margin-top: 0.6rem; color: var(--gofr-fg-muted);">~25 lines for one publish. Multiply by every service.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">10 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     5 · RAW CONSUMER
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow amber">without GoFr · part 2</span>
+    <h3>The consumer, by hand.</h3>
+    <div class="rule"></div>
+    <div class="cols weighted">
+      <div>
+        <pre><code class="language-go" data-trim>r := kafka.NewReader(kafka.ReaderConfig{
+    Brokers:        []string{"localhost:9092"},
+    GroupID:        "order-service",
+    Topic:          "orders",
+    MinBytes:       10e3,
+    MaxBytes:       10e6,
+    CommitInterval: 0,            // commit manually
+})
+defer r.Close()
+
+for {
+    m, err := r.FetchMessage(ctx)
+    if err != nil { /* break, retry, …  */ }
+
+    if err := handle(ctx, m); err != nil {
+        // don't commit → poison-msg loop?
+        continue
+    }
+    if err := r.CommitMessages(ctx, m); err != nil {
+        log.Printf("commit: %v", err)
+    }
+}</code></pre>
+      </div>
+      <div class="col-card bad">
+        <h4>And you still have to</h4>
+        <ul>
+          <li>handle <span class="missing">rebalance callbacks</span></li>
+          <li>decide auto-commit vs manual — and live with it</li>
+          <li>build a <span class="missing">DLQ</span> for poison messages</li>
+          <li>drain in-flight on <span class="missing">SIGTERM</span></li>
+          <li>and <strong>still</strong> no trace ID survived from the producer</li>
+        </ul>
+        <p class="fp-sub" style="margin-top: 0.6rem;">~60 lines, none of it business logic.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">11 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     6 · WHY HTTP TRACING DOESN'T APPLY
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow indigo">the tracing problem</span>
+    <h3>HTTP tracing is the easy case.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 290" xmlns="http://www.w3.org/2000/svg" style="margin-top:0.4rem;">
+      <defs>
+        <linearGradient id="brokerGrad6" x1="0" x2="1">
+          <stop offset="0" stop-color="#22d3ee" stop-opacity="0.25"/>
+          <stop offset="1" stop-color="#818cf8" stop-opacity="0.25"/>
+        </linearGradient>
+        <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+        </marker>
+        <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#fb7185"/>
+        </marker>
+      </defs>
+
+      <g font-family="Inter, sans-serif">
+        <text x="40" y="35" fill="#94a3b8" font-size="13" font-weight="600">HTTP — synchronous, in-band</text>
+        <rect x="40"  y="55" width="160" height="60" rx="10" fill="#111c33" stroke="#34d399" stroke-opacity="0.5"/>
+        <text x="120" y="90" fill="#f8fafc" font-size="14" text-anchor="middle">client</text>
+        <rect x="440" y="55" width="160" height="60" rx="10" fill="#111c33" stroke="#34d399" stroke-opacity="0.5"/>
+        <text x="520" y="90" fill="#f8fafc" font-size="14" text-anchor="middle">server</text>
+        <line x1="200" y1="78" x2="440" y2="78" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <text x="320" y="68" fill="#22d3ee" font-size="11" text-anchor="middle">traceparent: 00-abc…-def-01</text>
+        <line x1="440" y1="100" x2="200" y2="100" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <text x="320" y="115" fill="#34d399" font-size="11" text-anchor="middle">200 OK · response</text>
+        <text x="640" y="90" fill="#34d399" font-size="13">✓ trivial</text>
+
+        <text x="40" y="155" fill="#94a3b8" font-size="13" font-weight="600">Kafka — async, fan-out, no return path</text>
+        <rect x="40"  y="170" width="160" height="60" rx="10" fill="#111c33" stroke="#fb7185" stroke-opacity="0.5"/>
+        <text x="120" y="205" fill="#f8fafc" font-size="14" text-anchor="middle">producer</text>
+        <rect x="320" y="170" width="160" height="60" rx="10" fill="url(#brokerGrad6)" stroke="#fb7185" stroke-opacity="0.4"/>
+        <text x="400" y="205" fill="#f8fafc" font-size="14" text-anchor="middle">broker</text>
+        <rect x="600" y="135" width="160" height="40" rx="8" fill="#111c33" stroke="#fb7185" stroke-opacity="0.5"/>
+        <text x="680" y="160" fill="#f8fafc" font-size="13" text-anchor="middle">consumer A</text>
+        <rect x="600" y="185" width="160" height="40" rx="8" fill="#111c33" stroke="#fb7185" stroke-opacity="0.5"/>
+        <text x="680" y="210" fill="#f8fafc" font-size="13" text-anchor="middle">consumer B</text>
+        <rect x="600" y="235" width="160" height="40" rx="8" fill="#111c33" stroke="#fb7185" stroke-opacity="0.5" opacity="0.5"/>
+        <text x="680" y="260" fill="#94a3b8" font-size="13" text-anchor="middle">… N more</text>
+
+        <line x1="200" y1="200" x2="320" y2="200" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arr3)"/>
+        <line x1="480" y1="200" x2="600" y2="155" stroke="#fb7185" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="480" y1="200" x2="600" y2="205" stroke="#fb7185" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="480" y1="200" x2="600" y2="255" stroke="#fb7185" stroke-width="1.2" marker-end="url(#arr3)" opacity="0.5"/>
+
+        <text x="820" y="195" fill="#fb7185" font-size="13">no <tspan font-family="JetBrains Mono">traceparent</tspan> header.</text>
+        <text x="820" y="215" fill="#fb7185" font-size="13">no return channel.</text>
+        <text x="820" y="235" fill="#fb7185" font-size="13">parent/child won't fit fan-out.</text>
+      </g>
+    </svg>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">12 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     13 · OTEL PROPAGATION PRIMER — carriers & propagators
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow indigo">otel, briefly</span>
+    <h3>Propagators carry <em>what</em>. Carriers carry <em>how</em>.</h3>
+    <div class="rule"></div>
+
+    <div class="cols" style="margin-top: 0.4rem; gap: 1.4rem;">
+      <div class="col-card">
+        <h4 style="color: var(--gofr-cyan); margin-bottom: 0.3rem;">Propagator <span style="color: var(--gofr-fg-muted); font-weight: 400;">— the format</span></h4>
+        <ul style="margin: 0;">
+          <li><strong>W3C TraceContext</strong> <span style="color: var(--gofr-fg-muted);">— <code>traceparent</code> · default</span></li>
+          <li><strong>Baggage</strong> <span style="color: var(--gofr-fg-muted);">— user-defined k/v</span></li>
+          <li><strong>B3</strong> <span style="color: var(--gofr-fg-muted);">— Zipkin-compatible</span></li>
+          <li><strong>Jaeger</strong> · <strong>Composite</strong> <span style="color: var(--gofr-fg-muted);">— stack several</span></li>
+        </ul>
+      </div>
+
+      <div class="col-card">
+        <h4 style="color: var(--gofr-indigo); margin-bottom: 0.3rem;">Carrier <span style="color: var(--gofr-fg-muted); font-weight: 400;">— the transport</span></h4>
+        <ul style="margin: 0 0 0.5rem;">
+          <li><code>propagation.HeaderCarrier</code> <span style="color: var(--gofr-fg-muted);">— over <code>http.Header</code></span></li>
+          <li><code>propagation.MapCarrier</code> <span style="color: var(--gofr-fg-muted);">— over <code>map[string]string</code></span></li>
+          <li style="color: var(--gofr-fg-strong);"><code>your own</code> <span style="color: var(--gofr-fg-muted);">— satisfy the 3-method interface</span></li>
+        </ul>
+<pre class="compact" style="margin: 0;"><code class="language-go" data-trim>type TextMapCarrier interface {
+    Get(key string) string
+    Set(key, value string)
+    Keys() []string
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="callout amber" style="margin-top: 0.7rem;">
+      Kafka headers aren't <code>http.Header</code> and aren't <code>map[string]string</code> — they're <code>[]kafka.Header</code>. So we implement the interface <em>over that slice</em> ourselves. That's the next slide.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">13 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     14 · HAND-ROLLING OTel FOR KAFKA
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow amber">without GoFr · part 3</span>
+    <h3>Hand-rolling OpenTelemetry.</h3>
+    <div class="rule"></div>
+    <div class="cols tight">
+      <div>
+        <h4 style="color: var(--gofr-fg-muted); font-weight:500;">Step 1 — Implement <code>TextMapCarrier</code> over Kafka headers</h4>
+        <pre><code class="language-go" data-trim>type headerCarrier []kafka.Header
+
+func (c headerCarrier) Get(k string) string {
+    for _, h := range c {
+        if h.Key == k { return string(h.Value) }
+    }
+    return ""
+}
+func (c *headerCarrier) Set(k, v string) {
+    *c = append(*c, kafka.Header{
+        Key: k, Value: []byte(v),
+    })
+}
+func (c headerCarrier) Keys() []string { /* … */ }</code></pre>
+      </div>
+      <div>
+        <h4 style="color: var(--gofr-fg-muted); font-weight:500;">Step 2 — Inject on publish, extract on subscribe</h4>
+        <pre><code class="language-go" data-trim>// publish
+ctx, span := tr.Start(ctx, "publish",
+    trace.WithSpanKind(trace.SpanKindProducer))
+carrier := headerCarrier(msg.Headers)
+otel.GetTextMapPropagator().Inject(ctx, &carrier)
+msg.Headers = []kafka.Header(carrier)
+
+// subscribe
+carrier := headerCarrier(msg.Headers)
+parent := otel.GetTextMapPropagator().
+    Extract(ctx, &carrier)
+sc := trace.SpanContextFromContext(parent)
+var links []trace.Link
+if sc.IsValid() {
+    links = []trace.Link{{SpanContext: sc}}
+}
+ctx, span := tr.Start(parent, "subscribe",
+    trace.WithSpanKind(trace.SpanKindConsumer),
+    trace.WithLinks(links...),
+)</code></pre>
+      </div>
+    </div>
+    <div class="callout indigo" style="margin-top: 1rem;">
+      <strong>Span links</strong>, not just parent/child — one Kafka message can fan out to N consumer groups; parent/child can't model that, links can. We do both.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">14 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     8 · TALLY
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow amber">the bill</span>
+    <h2>Per service, per concern.</h2>
+    <div class="rule"></div>
+    <div class="tally">
+      <div class="head lhs">Concern</div>
+      <div class="head" style="text-align:right;">Raw Kafka</div>
+      <div class="head" style="text-align:right;">GoFr</div>
+
+      <div class="lhs">Broker connection &amp; lifecycle</div>
+      <div class="raw" style="text-align:right;">~25</div>
+      <div class="gofr" style="text-align:right;">env var</div>
+
+      <div class="lhs">Consumer group + rebalance</div>
+      <div class="raw" style="text-align:right;">~30</div>
+      <div class="gofr" style="text-align:right;">env var</div>
+
+      <div class="lhs">Manual offset commit</div>
+      <div class="raw" style="text-align:right;">~10</div>
+      <div class="gofr" style="text-align:right;">automatic</div>
+
+      <div class="lhs">Prometheus metrics</div>
+      <div class="raw" style="text-align:right;">~20</div>
+      <div class="gofr" style="text-align:right;">automatic</div>
+
+      <div class="lhs"><code>/health</code> endpoint</div>
+      <div class="raw" style="text-align:right;">~15</div>
+      <div class="gofr" style="text-align:right;">automatic</div>
+
+      <div class="lhs"><strong>Distributed tracing</strong></div>
+      <div class="raw" style="text-align:right;">~50</div>
+      <div class="gofr" style="text-align:right;">automatic</div>
+
+      <div class="lhs">Graceful shutdown</div>
+      <div class="raw" style="text-align:right;">~15</div>
+      <div class="gofr" style="text-align:right;">automatic</div>
+
+      <div class="lhs total">Per service</div>
+      <div class="raw total" style="text-align:right;">~165 lines</div>
+      <div class="gofr total" style="text-align:right;">~6 lines</div>
+    </div>
+    <p style="margin-top:1.4rem; color: var(--gofr-fg-muted); font-size:1.05rem;">
+      Three services × 165 = <strong style="color: var(--gofr-red);">≈ 500 lines of plumbing.</strong>
+      None of it business logic. All of it has to be reviewed, tested, and maintained.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">15 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     9 · THE GOFR VERSION
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow green">with GoFr</span>
+    <h2>The same flow. <em>Business logic only.</em></h2>
+    <div class="rule"></div>
+    <div class="cols tight">
+      <div>
+        <h4 style="color: var(--gofr-fg-muted); font-weight:500;">api-gateway</h4>
+        <pre><code class="language-go" data-trim>app := gofr.New()
+
+app.POST("/order", func(ctx *gofr.Context) (any, error) {
+    var o Order
+    if err := ctx.Bind(&o); err != nil { return nil, err }
+    msg, _ := json.Marshal(o)
+    return "ok", ctx.GetPublisher().Publish(ctx, "orders", msg)
+})
+
+app.Run()</code></pre>
+      </div>
+      <div>
+        <h4 style="color: var(--gofr-fg-muted); font-weight:500;">order-service</h4>
+        <pre><code class="language-go" data-trim>app := gofr.New()
+
+app.Subscribe("orders", func(ctx *gofr.Context) error {
+    var o Order
+    if err := ctx.Bind(&o); err != nil { return err }
+    msg, _ := json.Marshal(validate(o))
+    return ctx.GetPublisher().Publish(ctx, "alerts", msg)
+})
+
+app.Run()</code></pre>
+      </div>
+    </div>
+    <div class="callout">
+      Tracing, metrics, health, graceful shutdown, consumer groups, SASL, batching — <strong>all already on</strong>. Configured by env var.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">16 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     10 · THE 50 LINES GOFR HIDES
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow indigo">no magic, just code</span>
+    <h3>Here are the 50 lines GoFr hides for you.</h3>
+    <div class="rule"></div>
+    <p style="color: var(--gofr-fg-muted); margin: 0 0 0.4rem 0; font-size: 0.9rem;">
+      <code>pkg/gofr/datasource/pubsub/kafka/tracing.go</code>
+    </p>
+    <pre class="compact"><code class="language-go" data-trim>type headerCarrier []kafka.Header
+func (c  headerCarrier) Get(k string) string   { /* … */ }
+func (c *headerCarrier) Set(k, v string)       { /* … */ }
+func (c  headerCarrier) Keys() []string        { /* … */ }
+
+func startPublishSpan(ctx context.Context, topic string) (context.Context, trace.Span, []kafka.Header) {
+    ctx, span := tr.Start(ctx, "kafka-publish",
+        trace.WithSpanKind(trace.SpanKindProducer))
+    carrier := headerCarrier(nil)
+    otel.GetTextMapPropagator().Inject(ctx, &carrier)
+    return ctx, span, carrier
+}
+
+func startSubscribeSpan(ctx context.Context, topic string, h []kafka.Header) (context.Context, trace.Span) {
+    parentCtx := ctx
+    var links []trace.Link
+    if len(h) > 0 {
+        c := headerCarrier(h)
+        ex := otel.GetTextMapPropagator().Extract(ctx, &c)
+        if sc := trace.SpanContextFromContext(ex); sc.IsValid() {
+            parentCtx = ex                                 // child → same trace ID
+            links = []trace.Link{{SpanContext: sc}}        // link → fan-out aware
+        }
+    }
+    return tr.Start(parentCtx, "kafka-subscribe",
+        trace.WithSpanKind(trace.SpanKindConsumer),
+        trace.WithLinks(links...))
+}</code></pre>
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.6rem;">
+      You <em>could</em> write this. You don't have to. Same pattern in <code>nats</code>, <code>google</code>, <code>sqs</code>.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">17 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     11 · WHAT ELSE GOFR GIVES YOU
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow green">batteries included</span>
+    <h3>And while we're here…</h3>
+    <div class="rule"></div>
+    <div class="feature-grid">
+      <div class="feature-pill">
+        <div class="fp-icon">⚙️</div>
+        <div class="fp-title">Consumer groups</div>
+        <div class="fp-sub">Set <code>CONSUMER_ID</code>; framework owns the loop, rebalance, commits.</div>
+      </div>
+      <div class="feature-pill">
+        <div class="fp-icon">🔐</div>
+        <div class="fp-title">SASL / TLS</div>
+        <div class="fp-sub">One env block: <code>KAFKA_SECURITY_PROTOCOL</code>, <code>SASL_MECHANISM</code>.</div>
+      </div>
+      <div class="feature-pill">
+        <div class="fp-icon">📦</div>
+        <div class="fp-title">Batching &amp; retries</div>
+        <div class="fp-sub">Producer batching tunable via <code>KAFKA_BATCH_SIZE</code> and friends.</div>
+      </div>
+      <div class="feature-pill">
+        <div class="fp-icon">🩺</div>
+        <div class="fp-title"><code>/.well-known/health</code></div>
+        <div class="fp-sub">Auto-published, includes broker reachability.</div>
+      </div>
+      <div class="feature-pill">
+        <div class="fp-icon">📊</div>
+        <div class="fp-title">Metrics on :2121</div>
+        <div class="fp-sub"><code>app_pubsub_publish_total_count</code>, latency histograms, free.</div>
+      </div>
+      <div class="feature-pill">
+        <div class="fp-icon">🛑</div>
+        <div class="fp-title">Graceful shutdown</div>
+        <div class="fp-sub"><code>app.Run()</code> handles SIGTERM, drains in-flight messages.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">18 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     12 · ARCHITECTURE / WHAT YOU'LL SEE IN JAEGER
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">what shows up in Jaeger</span>
+    <h3>One trace ID. Six spans. Three services.</h3>
+    <div class="rule"></div>
+
+    <svg viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg" style="margin-top: 0.6rem;">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="1">
+          <stop offset="0" stop-color="#22d3ee"/>
+          <stop offset="1" stop-color="#818cf8"/>
+        </linearGradient>
+      </defs>
+      <g font-family="Inter, sans-serif" font-size="12" fill="#e2e8f0">
+        <!-- timeline axis -->
+        <line x1="20" y1="248" x2="1080" y2="248" stroke="#334155" stroke-width="1"/>
+        <text x="20" y="268" font-size="11" fill="#94a3b8">0ms</text>
+        <text x="1050" y="268" font-size="11" fill="#94a3b8">~ 25ms</text>
+
+        <!-- row 1: HTTP POST -->
+        <rect x="20"  y="20"  width="700" height="20" rx="5" fill="url(#g1)"/>
+        <text x="730" y="35"  fill="#e2e8f0" font-weight="600">HTTP POST /order<tspan fill="#94a3b8" font-weight="400">  ·  api-gateway</tspan></text>
+
+        <!-- row 2: publish orders -->
+        <rect x="60"  y="50"  width="80"  height="20" rx="5" fill="#22d3ee"/>
+        <text x="150" y="65"  fill="#e2e8f0" font-weight="600">kafka-publish<tspan fill="#94a3b8" font-weight="400">  ·  orders  ·  api-gateway</tspan></text>
+
+        <!-- row 3: subscribe orders -->
+        <rect x="150" y="80"  width="500" height="20" rx="5" fill="#818cf8"/>
+        <text x="660" y="95"  fill="#e2e8f0" font-weight="600">kafka-subscribe<tspan fill="#94a3b8" font-weight="400">  ·  orders  ·  order-service</tspan></text>
+
+        <!-- row 4: publish alerts -->
+        <rect x="190" y="110" width="80"  height="20" rx="5" fill="#22d3ee"/>
+        <text x="280" y="125" fill="#e2e8f0" font-weight="600">kafka-publish<tspan fill="#94a3b8" font-weight="400">  ·  alerts  ·  order-service</tspan></text>
+
+        <!-- row 5: subscribe alerts -->
+        <rect x="280" y="140" width="380" height="20" rx="5" fill="#818cf8"/>
+        <text x="670" y="155" fill="#e2e8f0" font-weight="600">kafka-subscribe<tspan fill="#94a3b8" font-weight="400">  ·  alerts  ·  notification-svc</tspan></text>
+
+        <!-- row 6: notify -->
+        <rect x="320" y="170" width="280" height="20" rx="5" fill="#34d399"/>
+        <text x="610" y="185" fill="#e2e8f0" font-weight="600">notify<tspan fill="#94a3b8" font-weight="400">  ·  slack-mock  ·  notification-svc</tspan></text>
+
+        <text x="20"  y="220" fill="#94a3b8" font-size="12">trace-id ▸ <tspan fill="#22d3ee" font-family="JetBrains Mono">c3f987558450553d5ea4986131475b9d</tspan></text>
+      </g>
+    </svg>
+
+    <p style="color: var(--gofr-fg-muted); font-size: 0.95rem; margin-top: 0.4rem;">
+      Producer span is the <em>parent</em> of the consumer span — same trace ID flows the chain. A span <em>link</em> is also attached so OTel-aware tools can model fan-out.
+    </p>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">19 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     13 · LIVE DEMO
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow indigo">~ 10 minutes</span>
+    <h1 style="font-size: 5rem;">Live demo.</h1>
+    <div class="rule"></div>
+    <div class="cols">
+      <div class="col-card">
+        <h4>Stack (already up)</h4>
+        <ul>
+          <li>Kafka + Zookeeper</li>
+          <li>3 GoFr services</li>
+          <li>Jaeger · :16686</li>
+          <li>Prometheus + Grafana</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h4>What we'll do</h4>
+        <ol>
+          <li>POST one order — open the trace in Jaeger</li>
+          <li>Burst 100 — show throughput in Grafana</li>
+          <li>Kill a consumer — watch the topic back up, then drain</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="term">
+<span class="prompt">$</span> curl -X POST http://localhost:8000/order \
+    -H "Content-Type: application/json" \
+    -d '{"orderId":"DEMO-1","item":"sticker","qty":3}'
+<span class="output">→ open http://localhost:16686  (service: api-gateway)</span></div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">20 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     14 · PRODUCTION KNOBS
+============================================================ -->
+<section>
+  <div class="slide-pad">
+    <span class="eyebrow">in production</span>
+    <h3>Knobs you'll actually turn.</h3>
+    <div class="rule"></div>
+    <div class="cols">
+      <div class="col-card">
+        <h4 style="color: var(--gofr-cyan);">Tracing</h4>
+        <ul>
+          <li><code>TRACER_RATIO=0.1</code> — head-based sampling</li>
+          <li><code>TRACE_EXPORTER=otlp</code> → Tempo / Datadog / Honeycomb</li>
+          <li><code>ParentBased</code> sampler — upstream decision wins</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h4 style="color: var(--gofr-indigo);">Kafka</h4>
+        <ul>
+          <li><code>KAFKA_BATCH_SIZE</code>, <code>KAFKA_BATCH_BYTES</code></li>
+          <li><code>KAFKA_SECURITY_PROTOCOL=SASL_SSL</code></li>
+          <li><code>KAFKA_SASL_MECHANISM=PLAIN | SCRAM-SHA-256</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout amber" style="margin-top:1rem;">
+      <strong>Not yet covered:</strong> schema registry, DLQ patterns, tail-based sampling. Open contributions welcome.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">21 / 22</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     16 · THANKS / Q&A
+============================================================ -->
+<section data-transition="fade">
+  <div class="slide-pad title-slide">
+    <div class="gofr-mark" style="margin-bottom: 2rem;">
+      <span class="dot"></span>
+      <span>Go<span class="accent">Fr</span></span>
+    </div>
+    <h1 style="font-size: 6.5rem;">Thanks.</h1>
+    <p class="subtitle" style="margin-top: 0.4rem;">Boring infra is the goal. Kafka included.</p>
+
+    <div style="display: flex; gap: 3rem; margin-top: 3rem; font-size: 1.1rem; color: var(--gofr-fg-muted);">
+      <div>
+        <div style="font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.4rem;">Source</div>
+        <div style="color: var(--gofr-cyan); font-family: 'JetBrains Mono', monospace;">github.com/gofr-dev/gofr</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.4rem;">Docs</div>
+        <div style="color: var(--gofr-cyan); font-family: 'JetBrains Mono', monospace;">gofr.dev</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span></span>
+    <span class="right">22 / 22 &nbsp;·&nbsp; Q&amp;A</span>
+  </div>
+</section>
+
+</div>
+</div>
+
+<!-- reveal.js scripts -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+    Reveal.initialize({
+        hash: true,
+        controls: false,
+        progress: true,
+        slideNumber: false,
+        transition: 'slide',
+        transitionSpeed: 'fast',
+        backgroundTransition: 'none',
+        width: 1280,
+        height: 720,
+        margin: 0.04,
+        minScale: 0.4,
+        maxScale: 1.6,
+        plugins: [RevealHighlight, RevealNotes],
+    });
+</script>
+</body>
+</html>
