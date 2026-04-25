@@ -148,17 +148,13 @@ script.
 
 ---
 
-## Speakers
+## Speaker
 
 **Aryan Mehrotra** — SSDE @ zop.dev · Maintainer, GoFr
 
 * LinkedIn: <https://www.linkedin.com/in/aryanmehrotra>
 * X: <https://x.com/_aryanmehrotra>
 * GitHub: <https://github.com/aryanmehrotra>
-
-**Piyush Singh** — SDE-2 @ zop.dev · OpenTofu / Helm modules maintainer
-
-* GitHub: <https://github.com/piyushsingh>
 
 ---
 
